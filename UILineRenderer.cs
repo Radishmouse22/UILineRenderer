@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace Radishmouse
 {
-	[RequireComponent(typeof(CanvasRenderer))]
+    [RequireComponent(typeof(CanvasRenderer))]
     public class UILineRenderer : MaskableGraphic
     {
         public Vector2[] points;
