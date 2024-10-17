@@ -3,7 +3,8 @@ using UnityEngine.UI;
 
 namespace Radishmouse
 {
-    public class UILineRenderer : Graphic
+    [RequireComponent(typeof(CanvasRenderer))]
+    public class UILineRenderer : MaskableGraphic
     {
         public Vector2[] points;
 
@@ -86,5 +87,5 @@ namespace Radishmouse
         {
             return (float)(Mathf.Atan2(target.y - vertex.y, target.x - vertex.x) * (180 / Mathf.PI));
         }
-}
+    }
 }
