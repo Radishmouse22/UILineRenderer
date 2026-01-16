@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Radishmouse
 {
@@ -15,7 +18,7 @@ namespace Radishmouse
         {
             vh.Clear();
 
-            if (points.Length < 2)
+            if (points == null || points.Length < 2)
                 return;
 
             for (int i = 0; i < points.Length-1; i++)
@@ -88,4 +91,99 @@ namespace Radishmouse
             return (float)(Mathf.Atan2(target.y - vertex.y, target.x - vertex.x) * (180 / Mathf.PI));
         }
     }
+
+#if UNITY_EDITOR
+    [CustomEditor(typeof(UILineRenderer))]
+    public class UILineRendererEditor : Editor
+    {
+        private UILineRenderer lineRenderer;
+
+        private void OnEnable()
+        {
+            lineRenderer = (UILineRenderer)target;
+        }
+
+        public override void OnInspectorGUI()
+        {
+            base.OnInspectorGUI(); // Draw default inspector
+
+            lineRenderer = (UILineRenderer)target;
+
+            if (GUILayout.Button("Add Point"))
+            {
+                Undo.RecordObject(lineRenderer, "Add Point");
+                if (lineRenderer.points == null)
+                {
+                    lineRenderer.points = new Vector2[1] { Vector2.zero };
+                }
+                else
+                {
+                    Vector2[] newPoints = new Vector2[lineRenderer.points.Length + 1];
+                    lineRenderer.points.CopyTo(newPoints, 0);
+                    newPoints[newPoints.Length - 1] = (newPoints.Length > 1) ? newPoints[newPoints.Length - 2] + new Vector2(10, 0) : Vector2.zero;
+                    lineRenderer.points = newPoints;
+                }
+                EditorUtility.SetDirty(lineRenderer);
+                if (lineRenderer != null) lineRenderer.SetVerticesDirty();
+            }
+
+            if (lineRenderer.points != null && lineRenderer.points.Length > 0)
+            {
+                if (GUILayout.Button("Remove Last Point"))
+                {
+                    Undo.RecordObject(lineRenderer, "Remove Last Point");
+                    Vector2[] newPoints = new Vector2[lineRenderer.points.Length - 1];
+                    for (int i = 0; i < newPoints.Length; i++)
+                    {
+                        newPoints[i] = lineRenderer.points[i];
+                    }
+                    lineRenderer.points = newPoints;
+                    EditorUtility.SetDirty(lineRenderer);
+                    if (lineRenderer != null) lineRenderer.SetVerticesDirty();
+                }
+            }
+        }
+
+        private void OnSceneGUI()
+        {
+            if (lineRenderer == null)
+            {
+                lineRenderer = (UILineRenderer)target;
+            }
+
+            if (lineRenderer.points == null || lineRenderer.points.Length == 0)
+                return;
+
+            RectTransform rt = lineRenderer.rectTransform;
+            Vector3 offset = lineRenderer.center ? (Vector3)rt.sizeDelta / 2f : Vector3.zero;
+            Transform tr = lineRenderer.transform;
+
+            Handles.color = Color.yellow;
+            for (int i = 0; i < lineRenderer.points.Length; i++)
+            {
+                Vector3 localPointWithoutOffset = lineRenderer.points[i];
+                Vector3 worldPos = tr.TransformPoint(localPointWithoutOffset - offset);
+
+                float handleSize = HandleUtility.GetHandleSize(worldPos) * 0.1f;
+
+                EditorGUI.BeginChangeCheck();
+                Vector3 newWorldPos = Handles.FreeMoveHandle(
+                    worldPos,
+                    handleSize,
+                    Vector3.zero,
+                    Handles.SphereHandleCap
+                );
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(lineRenderer, "Move Line Point");
+                    Vector2 newLocalPos = (Vector2)tr.InverseTransformPoint(newWorldPos) + (Vector2)offset;
+                    lineRenderer.points[i] = newLocalPos;
+                    EditorUtility.SetDirty(lineRenderer);
+                    if (lineRenderer != null) lineRenderer.SetVerticesDirty();
+                }
+            }
+        }
+    }
+#endif
 }
